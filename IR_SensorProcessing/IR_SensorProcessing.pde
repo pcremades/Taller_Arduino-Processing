@@ -34,6 +34,7 @@ void draw(){
     inString="";
     fill(0);
     ellipse( i, height*2/3 - y[N]/5, 5, 5);
+    //ellipse( i, height*2/3 - analogVal/5, 5, 5);
     i++;
     if( i>width){
       i=0;

@@ -6,7 +6,6 @@ String input;
 int data[];
 float[] sensData;
 float accX, accY, accZ;
-float[] yPos;
 int nyPos = 300, iyPos;
 float angle;
 float L = 100;
@@ -22,7 +21,6 @@ void setup() {
   //udp.log( true );
   udp.listen( true );
   rectMode(CENTER);
-  yPos = new float[nyPos];
 }
 
 void draw() {
