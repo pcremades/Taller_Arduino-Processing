@@ -13,7 +13,7 @@ void setup(){
   Serial.begin(115200);
 }
 
-char inputString[500];         // a String to hold incoming data
+char inputString[1000];         // a String to hold incoming data
 boolean stringComplete = false;  // whether the string is complete
 
 int N = 100;
@@ -126,24 +126,28 @@ int i=0;
 void loop(){
   if (stringComplete) {
     k = 0;
-    char* numStr = strtok(inputString, " ");
+    char* numStr = strtok(inputString, ",");
     while( numStr != 0 ){
       int num = atoi(numStr);
       vect[k] = num;
+      Serial.println(num);
       k++;
-      numStr = strtok(0, " ");
+      numStr = strtok(0, ",");
     }
-    N=vect[0];
+    N=k;
+    inputString[0] = 0;
+    k=0;
+    stringComplete = false;
   }
-  stringComplete = false;
+  
 }
 
 ISR(TIMER2_OVF_vect){
   //contador++;
   i++;
   //delayMicroseconds(50);
-  if( i>=N )
-    i=1;
+  if( i>N )
+    i=0;
   analogWrite(3, vect[i]);
 }
 
@@ -157,7 +161,7 @@ void serialEvent() {
     k++;
     // if the incoming character is a newline, set a flag so the main loop can
     // do something about it:
-    if (inChar == '\n' || k==500) {
+    if (inChar == '\n' || k==999) {
       stringComplete = true;
       k=0;
     }
