@@ -1,3 +1,5 @@
+import processing.serial.*;
+
 import g4p_controls.*;
 
 GTextField kp;
@@ -5,6 +7,8 @@ GTextField ki;
 GTextField kd;
 
 GButton Set;
+
+Serial puerto;
 
 void setup(){
  size(800, 600);
@@ -16,9 +20,16 @@ void setup(){
  kd.setText("1");
  
  Set = new GButton(this, 100, 300, 100, 50, "SET");
+ 
+ puerto = new Serial(this, "/dev/ttyUSB0", 115200);
 }
 
 void draw(){
+}
+
+void SerialEvent( Serial p){
+   String inString = p.readString();
+   println(inString);
 }
 
 
