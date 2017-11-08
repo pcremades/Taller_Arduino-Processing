@@ -5,6 +5,11 @@ import g4p_controls.*;
 GButton Iniciar;
 GButton Detener;
 GDropList lista;
+
+Serial puerto;
+
+String[] puertos = {"Puerto1", "Puerto2"};
+
 void setup(){
   size( 800, 600);
   
@@ -12,8 +17,9 @@ void setup(){
   Detener = new GButton(this, width*3/4, height/2, 100, 30, "Detener");
  
   lista = new GDropList(this, 100, 100, 200, 100);
-  String[] puertos = Serial.list();
   lista.setItems(puertos, 0);
+  
+  puertos = Serial.list();
 }
 
 void draw(){
@@ -21,15 +27,16 @@ void draw(){
 }
 
 void handleDropListEvents(GDropList list, GEvent event) { 
-   println(list.getSelectedIndex());
+   println(puertos[list.getSelectedIndex()]);
 }
 
 void handleButtonEvents( GButton b, GEvent e){
   if( e == GEvent.CLICKED){
   if( b == Iniciar )
      println("Iniciar");
-  else if( b == Detener )
+  else if( b == Detener ){
      println("Detener");
      exit();
   }
+}
 }
