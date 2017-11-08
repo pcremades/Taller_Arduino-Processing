@@ -1,7 +1,10 @@
+import g4p_controls.*;
 import grafica.*;
 import processing.video.*;
 
 GPlot graf;
+
+GDropList camSel;
 
 Capture video;
 int SubImgX, SubImgY;
@@ -12,6 +15,8 @@ GPointsArray GIntensidad;
 
 
 int[] x={0, 0}, y={0, 0};
+float theta;
+
 void setup() {
   size(800, 600);
   // Uses the default video input, see the reference if this causes an error
@@ -19,6 +24,10 @@ void setup() {
   video.start();  
   noStroke();
   smooth();
+  
+  camSel = new GDropList(this, width/2+100, 100, 250, 100);
+  String[] camaras = Capture.list();
+  camSel.setItems(camaras,0);
 
   SubImgX=width/2; 
   SubImgY=height/2;
@@ -41,7 +50,7 @@ void draw() {
     video.loadPixels();
     for ( int i=x[0]; i<=x[1]; i++) {
       for( int j=0; j< SubImgH; j++){
-      int pixIndex = (y[0]*width/SubImgX+j)*width + i*width/SubImgX;
+      int pixIndex = ((y[0] + round(i*theta))*width/SubImgX+j)*width + i*width/SubImgX;
       int pixVal = video.pixels[pixIndex];
       float pixelBrightness = brightness(pixVal);
       Intensidad[i-x[0]] = pixelBrightness/256;
@@ -64,8 +73,15 @@ void draw() {
     stroke(250, 250, 0, 128);
     line(x[0], y[0], x[1], y[1]);
     
-    graf.defaultDraw();
     graf.setPoints(GIntensidad);
+    graf.beginDraw();
+    graf.drawBackground();
+    graf.drawBox();
+    graf.drawXAxis();
+    graf.drawYAxis();
+    graf.drawTitle();
+    graf.drawLines();
+    graf.endDraw();
   }
 }
 
@@ -79,4 +95,12 @@ void mouseClicked() {
       y[1] = mouseY;
     }
   }
+  theta = float(y[1]-y[0])/float(x[1]-x[0]);
+  println(theta);
+}
+
+void handleDropListEvents(GDropList list, GEvent event) { 
+   video.stop();
+   video = new Capture(this, camSel.getSelectedText());
+   video.start();
 }
