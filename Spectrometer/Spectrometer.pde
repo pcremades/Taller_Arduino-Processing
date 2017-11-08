@@ -8,26 +8,41 @@ GDropList camSel;
 
 Capture video;
 int SubImgX, SubImgY;
-int SubImgH=5;
+int SubImgH=15;
 
-float[] Intensidad = new float[800];
+float[] Intensidad = new float[1800];
 GPointsArray GIntensidad;
 
 
-int[] x={0, 0}, y={0, 0};
+int[] x={100, 300}, y={100, 100};
 float theta;
 
 void setup() {
-  size(800, 600);
+  size(1280, 720);
+  
+  camSel = new GDropList(this, width/2+100, 30, 300, 150);
+  String[] camaras = Capture.list();
+  int nCam = 0;
+  for( int k=0; k < camaras.length; k++ ){
+   if( camaras[k].contains("720") )
+     nCam++;
+  }
+  String[] camarasValid = new String[nCam+1];
+  nCam=0;
+  for( int k=0; k < camaras.length; k++ ){
+   if( camaras[k].contains("720") ){
+     camarasValid[nCam] = camaras[k];
+     nCam++;
+   }
+  }
+  
   // Uses the default video input, see the reference if this causes an error
-  video = new Capture(this, width, height);
+  video = new Capture(this, camarasValid[0]);
   video.start();  
   noStroke();
   smooth();
   
-  camSel = new GDropList(this, width/2+100, 100, 250, 100);
-  String[] camaras = Capture.list();
-  camSel.setItems(camaras,0);
+  camSel.setItems(camarasValid,0);
 
   SubImgX=width/2; 
   SubImgY=height/2;
@@ -48,20 +63,30 @@ void draw() {
     video.read();
     image(video, 0, 0, width/2, height/2); // Draw the webcam video onto the screen
     video.loadPixels();
-    for ( int i=x[0]; i<=x[1]; i++) {
-      for( int j=0; j< SubImgH; j++){
-      int pixIndex = ((y[0] + round(i*theta))*width/SubImgX+j)*width + i*width/SubImgX;
-      int pixVal = video.pixels[pixIndex];
+    //println(video.width + " " + video.height);
+    for ( int i=x[0]*2; i<=x[1]*2; i++) {
+     for( int j=0; j< SubImgH; j++){
+       int Y = y[0]*2 + round((i-x[0]*2)*theta) + j;
+      int pixIndex = Y*width + i;
+      int pixVal=0;
+      if(pixIndex > 1280*720)
+        println(pixIndex + " " + Y + " " + i);
+        try{
+        pixVal = video.pixels[pixIndex];
+      }
+      catch(Exception e){
+        println("Error: " + pixIndex + " " + Y + " " + i);
+      }
       float pixelBrightness = brightness(pixVal);
-      Intensidad[i-x[0]] = pixelBrightness/256;
+      Intensidad[i] = pixelBrightness/256;
       int currR = (pixVal >> 16) & 0xFF;  //Lee la componente roja
       int currG = (pixVal >> 8) & 0xFF;  //Lee la componente verde
       int currB = pixVal & 0xFF;    //Lee la componente azul
       stroke((currR + currG + currB)/3);
-      point( SubImgX + i, 200+j);
+      point( SubImgX + i-x[0]*2, 200+j);
       //graf.removePointAt(x[0], Intensidad[i]);
-      }
-       GIntensidad.add(i, Intensidad[i-x[0]]);
+     }
+       GIntensidad.add(i, Intensidad[i]);
     }
 
     //Dibuja la línea seleccionada.
@@ -96,7 +121,7 @@ void mouseClicked() {
     }
   }
   theta = float(y[1]-y[0])/float(x[1]-x[0]);
-  println(theta);
+  //println(theta);
 }
 
 void handleDropListEvents(GDropList list, GEvent event) { 
