@@ -19,34 +19,41 @@ float theta;
 
 void setup() {
   size(1280, 720);
-  
+
   camSel = new GDropList(this, width/2+100, 30, 300, 150);
   String[] camaras = Capture.list();
   int nCam = 0;
-  for( int k=0; k < camaras.length; k++ ){
-   if( camaras[k].contains("720") )
-     nCam++;
+  for ( int k=0; k < camaras.length; k++ ) {
+    if ( camaras[k].contains("640") )
+      nCam++;
   }
+
   String[] camarasValid = new String[nCam+1];
   nCam=0;
-  for( int k=0; k < camaras.length; k++ ){
-   if( camaras[k].contains("720") ){
-     camarasValid[nCam] = camaras[k];
-     nCam++;
-   }
+  for ( int k=0; k < camaras.length; k++ ) {
+    if ( camaras[k].contains("640") ) {
+      camarasValid[nCam] = camaras[k];
+      nCam++;
+    }
   }
-  
+
   // Uses the default video input, see the reference if this causes an error
-  video = new Capture(this, camarasValid[0]);
-  video.start();  
+  try {
+    video = new Capture(this, camarasValid[0]);
+    video.start();
+  }
+  catch( Exception e ) {
+    println("No hay cámaras HD conectadas");
+    exit();
+  }
   noStroke();
   smooth();
-  
-  camSel.setItems(camarasValid,0);
+
+  camSel.setItems(camarasValid, 0);
 
   SubImgX=width/2; 
   SubImgY=height/2;
-  
+
   graf = new GPlot(this);
   graf.setPos( 100, height/2);
   graf.setDim(500, 200);
@@ -64,29 +71,29 @@ void draw() {
     image(video, 0, 0, width/2, height/2); // Draw the webcam video onto the screen
     video.loadPixels();
     //println(video.width + " " + video.height);
-    for ( int i=x[0]*2; i<=x[1]*2; i++) {
-     for( int j=0; j< SubImgH; j++){
-       int Y = y[0]*2 + round((i-x[0]*2)*theta) + j;
-      int pixIndex = Y*width + i;
-      int pixVal=0;
-      if(pixIndex > 1280*720)
-        println(pixIndex + " " + Y + " " + i);
-        try{
-        pixVal = video.pixels[pixIndex];
+    for ( int i=x[0]*video.width/SubImgX; i<=x[1]*video.width/SubImgX; i++) {
+      for ( int j=0; j< SubImgH; j++) {
+        int Y = y[0]*video.height/SubImgY + round((i-x[0]*2)*theta) + j;
+        int pixIndex = Y*video.width + i;
+        int pixVal=0;
+        if (pixIndex > video.width*video.height)
+          println(pixIndex + " " + Y + " " + i);
+        try {
+          pixVal = video.pixels[pixIndex];
+        }
+        catch(Exception e) {
+          println("Error: " + pixIndex + " " + Y + " " + i);
+        }
+        float pixelBrightness = brightness(pixVal);
+        Intensidad[i] = pixelBrightness/256;
+        int currR = (pixVal >> 16) & 0xFF;  //Lee la componente roja
+        int currG = (pixVal >> 8) & 0xFF;  //Lee la componente verde
+        int currB = pixVal & 0xFF;    //Lee la componente azul
+        stroke((currR + currG + currB)/3);
+        point( SubImgX + i-x[0]*video.width/SubImgX, 200+j);
+        //graf.removePointAt(x[0], Intensidad[i]);
       }
-      catch(Exception e){
-        println("Error: " + pixIndex + " " + Y + " " + i);
-      }
-      float pixelBrightness = brightness(pixVal);
-      Intensidad[i] = pixelBrightness/256;
-      int currR = (pixVal >> 16) & 0xFF;  //Lee la componente roja
-      int currG = (pixVal >> 8) & 0xFF;  //Lee la componente verde
-      int currB = pixVal & 0xFF;    //Lee la componente azul
-      stroke((currR + currG + currB)/3);
-      point( SubImgX + i-x[0]*2, 200+j);
-      //graf.removePointAt(x[0], Intensidad[i]);
-     }
-       GIntensidad.add(i, Intensidad[i]);
+      GIntensidad.add(i, Intensidad[i]);
     }
 
     //Dibuja la línea seleccionada.
@@ -97,7 +104,7 @@ void draw() {
     ellipse(x[1], y[1], 10, 10);
     stroke(250, 250, 0, 128);
     line(x[0], y[0], x[1], y[1]);
-    
+
     graf.setPoints(GIntensidad);
     graf.beginDraw();
     graf.drawBackground();
@@ -125,7 +132,7 @@ void mouseClicked() {
 }
 
 void handleDropListEvents(GDropList list, GEvent event) { 
-   video.stop();
-   video = new Capture(this, camSel.getSelectedText());
-   video.start();
+  video.stop();
+  video = new Capture(this, camSel.getSelectedText());
+  video.start();
 }
