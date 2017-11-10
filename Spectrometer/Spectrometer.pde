@@ -16,22 +16,24 @@ GPointsArray GIntensidad;
 
 int[] x={100, 300}, y={100, 100};
 float theta;
+int blueX = 200, greenX=300;
+int blueWL = 436, greenWL = 546;  //Longitudes de onda correspondiente al azul y verde de lampara de mercurio.
 
 void setup() {
   size(1280, 720);
 
-  camSel = new GDropList(this, width/2+100, 30, 300, 150);
+  camSel = new GDropList(this, width/2+100, 50, 300, 150);
   String[] camaras = Capture.list();
   int nCam = 0;
   for ( int k=0; k < camaras.length; k++ ) {
-    if ( camaras[k].contains("640") )
+    if ( camaras[k].contains("fps=10") )
       nCam++;
   }
 
   String[] camarasValid = new String[nCam+1];
   nCam=0;
   for ( int k=0; k < camaras.length; k++ ) {
-    if ( camaras[k].contains("640") ) {
+    if ( camaras[k].contains("fps=10") ) {
       camarasValid[nCam] = camaras[k];
       nCam++;
     }
@@ -55,7 +57,7 @@ void setup() {
   SubImgY=height/2;
 
   graf = new GPlot(this);
-  graf.setPos( 100, height/2);
+  graf.setPos( SubImgX, height/3);
   graf.setDim(500, 200);
   graf.setFixedYLim(true);
   graf.setYLim(0.0, 1.0);
@@ -67,33 +69,38 @@ void draw() {
   if (video.available()) {
     GIntensidad = new GPointsArray(800);
     background(255);
+    textSize(22);
+    text("Seleccione la cámara: ", width/2+100, 30);
     video.read();
     image(video, 0, 0, width/2, height/2); // Draw the webcam video onto the screen
     video.loadPixels();
     //println(video.width + " " + video.height);
     for ( int i=x[0]*video.width/SubImgX; i<=x[1]*video.width/SubImgX; i++) {
+      //for ( int j=0; j< SubImgH; j++) {
+      // int Y = y[0]*video.height/SubImgY + round((i-x[0]*video.width/SubImgX)*theta) + j;
+      int Y = y[0]*video.height/SubImgY + round((i-x[0]*video.width/SubImgX)*theta);
+      int pixIndex = Y*video.width + i;
+      int pixVal=0;
+      if (pixIndex > video.width*video.height)
+        println(pixIndex + " " + Y + " " + i);
+      try {
+        pixVal = video.pixels[pixIndex];
+      }
+      catch(Exception e) {
+        println("Error: " + pixIndex + " " + Y + " " + i);
+      }
+      float pixelBrightness = brightness(pixVal);
+      Intensidad[i] = pixelBrightness/256;
+      int currR = (pixVal >> 16) & 0xFF;  //Lee la componente roja
+      int currG = (pixVal >> 8) & 0xFF;  //Lee la componente verde
+      int currB = pixVal & 0xFF;    //Lee la componente azul
+      stroke(currR, currG, currB);
       for ( int j=0; j< SubImgH; j++) {
-        int Y = y[0]*video.height/SubImgY + round((i-x[0]*2)*theta) + j;
-        int pixIndex = Y*video.width + i;
-        int pixVal=0;
-        if (pixIndex > video.width*video.height)
-          println(pixIndex + " " + Y + " " + i);
-        try {
-          pixVal = video.pixels[pixIndex];
-        }
-        catch(Exception e) {
-          println("Error: " + pixIndex + " " + Y + " " + i);
-        }
-        float pixelBrightness = brightness(pixVal);
-        Intensidad[i] = pixelBrightness/256;
-        int currR = (pixVal >> 16) & 0xFF;  //Lee la componente roja
-        int currG = (pixVal >> 8) & 0xFF;  //Lee la componente verde
-        int currB = pixVal & 0xFF;    //Lee la componente azul
-        stroke((currR + currG + currB)/3);
-        point( SubImgX + i-x[0]*video.width/SubImgX, 200+j);
+        point( SubImgX/2 + i-x[0]*video.width/SubImgX - (x[1]-x[0])/2*video.width/SubImgX, SubImgY+100+j);
         //graf.removePointAt(x[0], Intensidad[i]);
       }
-      GIntensidad.add(i, Intensidad[i]);
+      int iScaled = blueWL + (greenWL - blueWL)/(greenX - blueX)*(i-blueX); ///(x[1]-x[0])*video.width/SubImgX
+      GIntensidad.add(iScaled, Intensidad[i]);
     }
 
     //Dibuja la línea seleccionada.
@@ -104,6 +111,13 @@ void draw() {
     ellipse(x[1], y[1], 10, 10);
     stroke(250, 250, 0, 128);
     line(x[0], y[0], x[1], y[1]);
+    
+    stroke(0, 0, 250, 200);
+    strokeWeight(3);
+    line( blueX+(SubImgX/2 - (x[1]-x[0])/2*video.width/SubImgX), SubImgY+90, blueX+(SubImgX/2 - (x[1]-x[0])/2*video.width/SubImgX), SubImgY+130);
+    stroke(0, 250, 0, 200);
+    strokeWeight(3);
+    line( greenX+(SubImgX/2 - (x[1]-x[0])/2*video.width/SubImgX) , SubImgY+90, greenX+(SubImgX/2 - (x[1]-x[0])/2*video.width/SubImgX), SubImgY+130);
 
     graf.setPoints(GIntensidad);
     graf.beginDraw();
@@ -129,6 +143,21 @@ void mouseClicked() {
   }
   theta = float(y[1]-y[0])/float(x[1]-x[0]);
   //println(theta);
+}
+
+void keyPressed() {
+  if(mouseX > SubImgX/2 - (x[1]-x[0])/2*video.width/SubImgX & mouseX < SubImgX/2 + (x[1]-x[0])/2*video.width/SubImgX)
+  {
+  switch( key ) {
+  case 'b':
+    blueX = mouseX - (SubImgX/2 - (x[1]-x[0])/2*video.width/SubImgX);
+    println(blueX);
+    break;
+  case 'g':
+    greenX = mouseX - (SubImgX/2 - (x[1]-x[0])/2*video.width/SubImgX);
+    break;
+  }
+  }
 }
 
 void handleDropListEvents(GDropList list, GEvent event) { 
