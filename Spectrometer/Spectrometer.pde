@@ -5,6 +5,8 @@ import processing.video.*;
 GPlot graf;
 
 GDropList camSel;
+GButton Tare;
+GButton unTare;
 
 Capture video;
 int SubImgX, SubImgY;
@@ -12,6 +14,7 @@ int SubImgH=15;
 
 float[] Intensidad = new float[1800];
 GPointsArray GIntensidad;
+GPointsArray Cal;
 
 
 int[] x={100, 300}, y={100, 100};
@@ -21,8 +24,15 @@ int blueWL = 436, greenWL = 546;  //Longitudes de onda correspondiente al azul y
 
 void setup() {
   size(1280, 720);
+  
+  SubImgX=width/2; 
+  SubImgY=height/2;
+  
+  Cal = new GPointsArray();
 
   camSel = new GDropList(this, width/2+100, 50, 300, 150);
+  Tare = new GButton(this, width/2 + 10, SubImgY + 200, 100, 20, "Calibrar");
+  unTare = new GButton(this, width/2 + 150, SubImgY + 200, 100, 20, "Borrar");
   String[] camaras = Capture.list();
   int nCam = 0;
   for ( int k=0; k < camaras.length; k++ ) {
@@ -53,9 +63,6 @@ void setup() {
 
   camSel.setItems(camarasValid, 0);
 
-  SubImgX=width/2; 
-  SubImgY=height/2;
-
   graf = new GPlot(this);
   graf.setPos( SubImgX, height/3);
   graf.setDim(500, 200);
@@ -67,7 +74,7 @@ void setup() {
 
 void draw() {
   if (video.available()) {
-    GIntensidad = new GPointsArray(800);
+    GIntensidad = new GPointsArray();
     background(255);
     textSize(22);
     text("Seleccione la cámara: ", width/2+100, 30);
@@ -99,8 +106,17 @@ void draw() {
         point( SubImgX/2 + i-x[0]*video.width/SubImgX - (x[1]-x[0])/2*video.width/SubImgX, SubImgY+100+j);
         //graf.removePointAt(x[0], Intensidad[i]);
       }
-      int iScaled = blueWL + (greenWL - blueWL)/(greenX - blueX)*(i-blueX); ///(x[1]-x[0])*video.width/SubImgX
-      GIntensidad.add(iScaled, Intensidad[i]);
+      int iScaled = round(float(blueWL) + float(greenWL - blueWL)/float(greenX - blueX) * float((i-x[0]*video.width/SubImgX)-blueX)); ///(x[1]-x[0])*video.width/SubImgX
+      
+      try{
+        float ggg = 1 - Intensidad[i] - Cal.getY(i - x[0]*video.width/SubImgX);
+        GIntensidad.add(iScaled, ggg);
+      }
+      catch( Exception e){
+        GIntensidad.add(iScaled, Intensidad[i]);
+        textSize(12);
+        text("Sin Calibrar", SubImgX+10, height/3 - 10);
+      }
     }
 
     //Dibuja la línea seleccionada.
@@ -127,6 +143,7 @@ void draw() {
     graf.drawYAxis();
     graf.drawTitle();
     graf.drawLines();
+    graf.setHorizontalAxesTicksSeparation(30);
     graf.endDraw();
   }
 }
@@ -164,4 +181,11 @@ void handleDropListEvents(GDropList list, GEvent event) {
   video.stop();
   video = new Capture(this, camSel.getSelectedText());
   video.start();
+}
+
+void handleButtonEvents(GButton button, GEvent event) { 
+  if( button == Tare )
+    Cal.add(graf.getPoints());
+  else if( button == unTare )
+    Cal = new GPointsArray();
 }
