@@ -45,23 +45,27 @@ float error = 0;
 // PID VARIABLES *********************************************************************
 double pidSetpoint, pidInput, pidOutput;
 double realOutput;
+double linSetpoint, linInput, linOutput;
+double linRealOutput;
 
 // create the PID controller
-//PID myPID(&pidInput, &pidOutput, &pidSetpoint, 40, 0, 0, DIRECT); // standard tuning
-//PID myPID(&pidInput, &pidOutput, &pidSetpoint, 15, 25, 5, DIRECT); // standard tuning
-//PID myPID(&pidInput, &pidOutput, &pidSetpoint, 18, 32, 0.16, DIRECT); // standard tuning
-//PID myPID(&pidInput, &pidOutput, &pidSetpoint, 15, 12, 0.16, DIRECT); // standard tuning
-PID myPID(&pidInput, &pidOutput, &pidSetpoint, 11, 50, 0.2, DIRECT); // standard tuning
-//PID myPID(&pidInput, &pidOutput, &pidSetpoint, 4, 4, 0, DIRECT); // debug tuning
+//PID rotPID(&pidInput, &pidOutput, &pidSetpoint, 40, 0, 0, DIRECT); // standard tuning
+//PID rotPID(&pidInput, &pidOutput, &pidSetpoint, 15, 25, 5, DIRECT); // standard tuning
+//PID rotPID(&pidInput, &pidOutput, &pidSetpoint, 18, 32, 0.16, DIRECT); // standard tuning
+//PID rotPID(&pidInput, &pidOutput, &pidSetpoint, 15, 12, 0.16, DIRECT); // standard tuning
+//PID rotPID(&pidInput, &pidOutput, &pidSetpoint, 11, 50, 0.2, DIRECT); // standard tuning
+PID rotPID(&pidInput, &pidOutput, &pidSetpoint, 11, 40, 0.2, DIRECT); // standard tuning
+PID linPID(&linInput, &pidSetpoint, &linSetpoint, 0.0015, 0.0002, 0.0006, DIRECT);
+//PID rotPID(&pidInput, &pidOutput, &pidSetpoint, 4, 4, 0, DIRECT); // debug tuning
 
 /*
 // frontend
-double Setpoint = desiredAngle;
-double Input = encoderPin;
-double Output = pwmPin;
-
-unsigned long serialTime;
-*/
+ double Setpoint = desiredAngle;
+ double Input = encoderPin;
+ double Output = pwmPin;
+ 
+ unsigned long serialTime;
+ */
 
 // reverse the motor direction
 void changeDirection() {
@@ -87,26 +91,28 @@ void setup() {
   attachInterrupt( 0, ISR_Pend, CHANGE);
   attachInterrupt( 1, ISR_Cart, CHANGE);
   pinMode( 8, INPUT_PULLUP);  
-  
+
   // start with 0 motor power
   digitalWrite(pwmPin, LOW);
-  
+
   // PID variables
   pidInput = 0;
   pidSetpoint = desiredAngle;
-  
+
   // turn PID on
-  myPID.SetMode(AUTOMATIC);
-  
+  rotPID.SetMode(AUTOMATIC);
+  linPID.SetMode(AUTOMATIC);
+
   /* limits: fixes "0" returned for angles 0-180. Uses -128.0~128.0 so that the
    *  values can be boosted by +/-127 to give a motor output range of -255~-127,
    *  0, and 127~255. This is because the lower half of 0-255 gives too little
    *  voltage to the motor for it to spin. */
-  myPID.SetOutputLimits(-128.0, 128.0);
-  
+  rotPID.SetOutputLimits(-128.0, 128.0);
+  linPID.SetOutputLimits(-128.0, 128.0);
+
   // get ready to log data to computer
   Serial.begin(115200);
-  
+
 }
 
 int thetaCero;
@@ -114,16 +120,18 @@ int inByte;
 boolean start = true;
 double lastTime;
 
+int CartCero;
+
 void inicio(){
-   motorDirection = 1;
-   changeDirection();
+  motorDirection = 1;
+  changeDirection();
   analogWrite(pwmPin, 150);
   Serial.println("Hasta el fin de carrera");
   while( digitalRead(8) == 1 );
   //Serial.println("llegamos a cero");
   CartPosition = 0;
   motorDirection = 0;
-    changeDirection();
+  changeDirection();
   analogWrite(pwmPin, 150);
   while( CartPosition < 1700 ){
     Serial.println(CartPosition);
@@ -131,14 +139,17 @@ void inicio(){
   analogWrite(pwmPin, 0);
   delay( 5000 );
   encoderPosition=0;
- start = false; 
+  CartCero = CartPosition;
+  CartPosition = 0;
+  linSetpoint = 0;
+  start = false; 
 }
 
 void loop() {
   if( start ){
     inicio();
   }
-  
+
   delay(1);
   if( Serial.available()>0 ){
     inByte = Serial.read();
@@ -150,7 +161,7 @@ void loop() {
   }
 
   encoderAngle = encoderPosition*360.0/1500.0;
-  
+
   // with 0 degrees being the top and increasing clockwise, the left half of the
   //  rotation range is considered to be -179~-1 instead of 181~359.
   if (encoderAngle > 180) {
@@ -159,14 +170,18 @@ void loop() {
   else {
     relativeAngle = encoderAngle;
   }
-  
+
   // difference from desiredAngle, doesn't account for desired angles other than 0
   error = relativeAngle;
   
+  linInput = double(CartPosition);
+  linPID.Compute();
+
   // do the PID magic
   pidInput = error;
-  myPID.Compute();
-  
+  //pidSetpoint = -pidSetpoint;
+  rotPID.Compute();
+
   if (pidOutput < 0) {
     motorDirection = 0;
     changeDirection();
@@ -175,7 +190,7 @@ void loop() {
     motorDirection = 1;
     changeDirection();
   }
-  
+
   // minimum motor power is 50%
   if (pidOutput == 0) {
     realOutput = 0;
@@ -186,63 +201,66 @@ void loop() {
   else if (pidOutput < 0) {
     realOutput = pidOutput - 127;
   }
-  
+
   // if the pendulum is too far off of vertical to recover, turn off the PID and motor
-  if (error > 45 || error < -45 || digitalRead(8) == 0 || CartPosition > 3000) {
+  if (error > 45 || error < -45 || digitalRead(8) == 0 || CartPosition > 1500) {
     //Serial.print("-- Angle out of bounds -- ");
-    myPID.SetMode(MANUAL);
+    rotPID.SetMode(MANUAL);
     analogWrite(pwmPin, 0);
     pidOutput = 0;
     realOutput = 0;
   }
   else {
-    myPID.SetMode(AUTOMATIC);
+    rotPID.SetMode(AUTOMATIC);
     // in bounds
     //Serial.print("-- MOTOR ACTIVE, write ");
     //Serial.print(realOutput);
     //Serial.print(" --");
     analogWrite(pwmPin, abs(realOutput));
   }
-  
-/*  
-  // frontend
-  if (millis()>serialTime) {
-    SerialReceive();
-    SerialSend();
-    serialTime+=500;
-  }
- */
-  
-  
+
+  /*  
+   // frontend
+   if (millis()>serialTime) {
+   SerialReceive();
+   SerialSend();
+   serialTime+=500;
+   }
+   */
+
+
   // debug logging
   //Serial.print("Relative angle: ");
   if( millis() - lastTime > 30){
-  Serial.print(relativeAngle, 2);
-  Serial.print(" ");
-  Serial.println(CartPosition);
-  lastTime = millis();
+    Serial.print(relativeAngle, 2);
+    Serial.print("   ");
+    Serial.print(linInput);
+    Serial.print("   ");
+    Serial.println(pidSetpoint);
+    lastTime = millis();
   }
   //Serial.print(" -- PID output: ");
   //Serial.println(pidOutput);
   //Serial.print(" -- proportional: ");
   //Serial.print(-- integral: ## -- derivative: ##")
   //delay(10);
-  
+
 }
 
 void ISR_Pend(){
- if( digitalRead(4) == digitalRead(2) )
-  encoderPosition++;
- else
-  encoderPosition--;
+  if( digitalRead(4) == digitalRead(2) )
+    encoderPosition++;
+  else
+    encoderPosition--;
 }
 
 void ISR_Cart(){
- if( digitalRead(3) == digitalRead(5) )
-  CartPosition++;
- else
-  CartPosition--;
+  if( digitalRead(3) == digitalRead(5) )
+    CartPosition++;
+  else
+    CartPosition--;
 }
+
 
 
 
