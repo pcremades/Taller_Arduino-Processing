@@ -9,7 +9,7 @@ void setup(){
   size(800, 600);
   initX = width-ancho;
   initY = height-altura;
-  frameRate(5);
+  frameRate(3);
 }
 
 void draw(){
@@ -20,8 +20,10 @@ void draw(){
   newPattern( patternN - i );
   readSensor();
   i--;
-  if( i <= 0 )
+  if( i <= 0 ){
     i = patternN;
+    noLoop();
+  }
 }
 
 void newPattern( int k ){
