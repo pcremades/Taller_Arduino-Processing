@@ -30,16 +30,22 @@ void setup() {
   
   Cal = new GPointsArray();
 
+//Droplist de cámaras disponibles
   camSel = new GDropList(this, width/2+100, 50, 300, 150);
+//Botón Calibrar
   Tare = new GButton(this, width/2 + 10, SubImgY + 200, 100, 20, "Calibrar");
+//Botón para borrar la calibración
   unTare = new GButton(this, width/2 + 150, SubImgY + 200, 100, 20, "Borrar");
+
+//Leer lista de cámaras y modos disponibles
   String[] camaras = Capture.list();
   int nCam = 0;
+//Busca sólo las cámaras que puedan grabar a 10 fps. Es para reducir el número items en la lista.
   for ( int k=0; k < camaras.length; k++ ) {
     if ( camaras[k].contains("fps=10") )
       nCam++;
   }
-
+//Crea un arreglo de strings para guardar la lista de cámara válidas.
   String[] camarasValid = new String[nCam+1];
   nCam=0;
   for ( int k=0; k < camaras.length; k++ ) {
@@ -63,6 +69,7 @@ void setup() {
 
   camSel.setItems(camarasValid, 0);
 
+//Configura el gráfico.
   graf = new GPlot(this);
   graf.setPos( SubImgX, height/3);
   graf.setDim(500, 200);
