@@ -1,9 +1,11 @@
 #Taller de Arduino y Processing
+
 Taller orientado a temas avanzados de microcontroladores y Arduino en particular.
 Además se introduce el lenguaje de programación Processing, la intercacción con Arduino y librerías útiles para
 generar interfaces gráficas.
 
 ##Arduino
+
 1. [Timer](https://github.com/pcremades/Taller_Arduino-Processing/tree/master/Timer2): configuración del TIMER2 para generar eventos cada 1 segundo.
 2. PWM: generación de [señales armónicas](https://github.com/pcremades/Taller_Arduino-Processing/tree/master/PWM_Test). Esta aplicación cambia la
 configuración del TIMER2 para utilizar el PWM a la máxima frecuencia posible y genera una onda senoidal. Debe utilizarse
