@@ -67,7 +67,7 @@ void setup() {
 void draw() {
   background(250);    
   //Compute angle
-  angle = atan(-accX/accY);
+  angle = atan(-accZ/accY);
   stroke(0);
   strokeWeight(3);
   line(width/2, 0, width/2-sin(angle)*L, L+cos(angle)*L);
