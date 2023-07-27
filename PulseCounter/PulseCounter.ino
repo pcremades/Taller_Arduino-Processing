@@ -7,6 +7,7 @@
 #define S1 4
 #define S2 6
 #define S3 7
+#define FO 8 //Frequency counter input pin (PB0)
 
 long tiempo=0;
 long freq=0;
@@ -52,5 +53,6 @@ void configTCS(){
   pinMode(S1, OUTPUT); digitalWrite(S1, HIGH);
   pinMode(S2, OUTPUT); digitalWrite(S2, HIGH);
   pinMode(S3, OUTPUT); digitalWrite(S3, LOW);
+  pingMode(F0, INPUT_PULLUP);
 }
 
